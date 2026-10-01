@@ -5,6 +5,7 @@ services:
       context: ./app
     image: acmecloud-app:v1
     container_name: acmecloud-app
+    restart: unless-stopped
     networks:
       - acmecloud-network
     healthcheck:
@@ -19,6 +20,7 @@ services:
       context: ./web
     image: acmecloud-web:v2
     container_name: acmecloud-web
+    restart: unless-stopped
     ports:
       - "8081:80"
     depends_on:
