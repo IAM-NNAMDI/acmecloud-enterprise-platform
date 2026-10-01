@@ -1,0 +1,17 @@
+# AcmeCloud Terraform variable examples
+# Copy this file to terraform.tfvars and replace the placeholder values.
+
+# Restrict SSH access to your own public IP address.
+bastion_allowed_cidr = "YOUR_PUBLIC_IP/32"
+
+# Use a valid AMI ID for the deployment region.
+ami_id = "ami-xxxxxxxxxxxxxxxxx"
+
+# Existing EC2 Key Pair name.
+key_name = "your-key-pair-name"
+
+# Use a strong password. Never commit the real value to Git.
+db_password = "REPLACE_WITH_SECURE_PASSWORD"
+
+# S3 bucket names must be globally unique.
+s3_bucket_name = "your-unique-acmecloud-assets-bucket"
