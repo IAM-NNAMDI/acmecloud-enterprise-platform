@@ -1,0 +1,8 @@
+
+---
+- name: Configure monitoring on AcmeCloud servers
+  hosts: acmecloud
+  become: true
+
+  roles:
+    - monitoring

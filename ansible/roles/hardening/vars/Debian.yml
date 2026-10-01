@@ -1,0 +1,4 @@
+
+---
+ssh_service: ssh
+sshd_binary: /usr/sbin/sshd

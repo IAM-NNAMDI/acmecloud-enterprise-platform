@@ -1,0 +1,16 @@
+---
+plugin: amazon.aws.aws_ec2
+
+regions:
+  - us-east-1
+
+filters:
+  instance-state-name: running
+
+hostnames:
+  - instance-id
+
+groups:
+  bastion: tags.Name == 'acmecloud-production-bastion'
+  web: tags.Name == 'acmecloud-production-apache'
+  app: tags.Name == 'acmecloud-production-tomcat'

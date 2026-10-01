@@ -1,0 +1,12 @@
+
+---
+common_packages:
+  - curl
+  - wget
+  - unzip
+  - git
+  - vim
+  - rsync
+  - chrony
+
+time_service: chronyd

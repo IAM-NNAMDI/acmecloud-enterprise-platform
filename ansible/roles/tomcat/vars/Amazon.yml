@@ -1,0 +1,5 @@
+
+---
+java_package: java-17-amazon-corretto-devel
+java_home: /usr/lib/jvm/java-17-amazon-corretto
+nologin_shell: /sbin/nologin

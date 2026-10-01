@@ -1,0 +1,7 @@
+---
+- name: Harden AcmeCloud servers
+  hosts: acmecloud
+  become: true
+
+  roles:
+    - hardening

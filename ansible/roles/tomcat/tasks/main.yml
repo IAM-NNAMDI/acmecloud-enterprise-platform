@@ -1,0 +1,80 @@
+---
+- name: Load distribution-specific Tomcat variables
+  ansible.builtin.include_vars:
+    file: "{{ lookup('ansible.builtin.first_found', params) }}"
+  vars:
+    params:
+      files:
+        - "{{ ansible_distribution }}.yml"
+        - "{{ ansible_os_family }}.yml"
+      paths:
+        - "{{ role_path }}/vars"
+
+- name: Install Java 17
+  ansible.builtin.package:
+    name: "{{ java_package }}"
+    state: present
+
+- name: Create Tomcat system group
+  ansible.builtin.group:
+    name: "{{ tomcat_group }}"
+    system: true
+    state: present
+
+- name: Create Tomcat service account
+  ansible.builtin.user:
+    name: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    system: true
+    create_home: false
+    shell: "{{ nologin_shell }}"
+    state: present
+
+- name: Create Tomcat installation directory
+  ansible.builtin.file:
+    path: "{{ tomcat_install_dir }}"
+    state: directory
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    mode: "0755"
+
+- name: Download Apache Tomcat
+  ansible.builtin.get_url:
+    url: "{{ tomcat_download_url }}"
+    dest: "/tmp/{{ tomcat_archive }}"
+    mode: "0644"
+
+- name: Extract Apache Tomcat
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ tomcat_archive }}"
+    dest: "{{ tomcat_install_dir }}"
+    remote_src: true
+    extra_opts:
+      - --strip-components=1
+    creates: "{{ tomcat_install_dir }}/bin/catalina.sh"
+
+- name: Set Tomcat directory ownership
+  ansible.builtin.file:
+    path: "{{ tomcat_install_dir }}"
+    owner: "{{ tomcat_user }}"
+    group: "{{ tomcat_group }}"
+    recurse: true
+
+- name: Deploy Tomcat systemd service
+  ansible.builtin.template:
+    src: tomcat.service.j2
+    dest: /etc/systemd/system/tomcat.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart Tomcat
+
+- name: Ensure Tomcat is enabled and running
+  ansible.builtin.systemd_service:
+    name: tomcat
+    state: started
+    enabled: true
+    daemon_reload: true
+

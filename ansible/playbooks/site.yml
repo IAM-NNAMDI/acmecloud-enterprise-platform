@@ -1,0 +1,23 @@
+---
+- name: Configure all AcmeCloud servers
+  hosts: acmecloud
+  become: true
+
+  roles:
+    - common
+    - hardening
+    - monitoring
+
+- name: Configure AcmeCloud Web Tier
+  hosts: web
+  become: true
+
+  roles:
+    - apache
+
+- name: Configure AcmeCloud Application Tier
+  hosts: app
+  become: true
+
+  roles:
+    - tomcat

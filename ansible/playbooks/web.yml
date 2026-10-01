@@ -1,0 +1,7 @@
+---
+- name: Configure AcmeCloud Web Tier
+  hosts: web
+  become: true
+
+  roles:
+    - apache

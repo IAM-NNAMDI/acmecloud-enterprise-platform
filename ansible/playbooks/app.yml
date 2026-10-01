@@ -1,0 +1,7 @@
+---
+- name: Configure Apache Tomcat application server
+  hosts: app
+  become: true
+
+  roles:
+    - tomcat

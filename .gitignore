@@ -1,0 +1,35 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+tfplan
+*.tfplan
+
+# Secrets / Credentials
+*.pem
+*.key
+.env
+.env.*
+*credentials*
+*secret*
+*password*
+
+# Ansible
+*.retry
+*.vault_pass
+vault-password*
+.vault_pass*
+
+# Editor / OS temporary files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Lambda build artifacts
+terraform/modules/storage-identity/lambda/*.zip
+terraform/modules/storage-identity/*.zip

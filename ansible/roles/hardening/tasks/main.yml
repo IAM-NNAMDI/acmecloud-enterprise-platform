@@ -1,0 +1,30 @@
+---
+- name: Load OS-specific hardening variables
+  ansible.builtin.include_vars:
+    file: "{{ ansible_os_family }}.yml"
+
+- name: Disable direct root SSH login
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin no'
+    validate: "{{ sshd_binary }} -t -f %s"
+  notify: Restart SSH
+
+- name: Disable SSH password authentication
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+    validate: "{{ sshd_binary }} -t -f %s"
+  notify: Restart SSH
+
+- name: Configure SSH idle timeout
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: "# {mark} ANSIBLE MANAGED IDLE TIMEOUT"
+    block: |
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+    validate: "{{ sshd_binary }} -t -f %s"
+  notify: Restart SSH

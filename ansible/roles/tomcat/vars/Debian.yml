@@ -1,0 +1,5 @@
+
+---
+java_package: openjdk-17-jdk
+java_home: /usr/lib/jvm/java-17-openjdk-amd64
+nologin_shell: /usr/sbin/nologin
