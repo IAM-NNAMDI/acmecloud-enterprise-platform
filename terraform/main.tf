@@ -196,6 +196,7 @@ module "storage_identity" {
 # ==================================================
 
 module "eks" {
+  count  = var.enable_eks ? 1 : 0
   source = "./modules/eks"
 
   project_name = var.project_name

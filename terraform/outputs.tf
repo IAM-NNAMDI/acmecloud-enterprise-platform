@@ -238,41 +238,42 @@ output "deployment_summary" {
     lambda       = module.storage_identity.lambda_function_name
   }
 }
+
 # ==================================================
 # Amazon EKS
-# ==================================================
+# ============================================================
 
 output "eks_cluster_name" {
   description = "Name of the AcmeCloud EKS cluster"
-  value       = module.eks.cluster_name
+  value       = var.enable_eks ? module.eks[0].cluster_name : null
 }
 
 output "eks_cluster_endpoint" {
   description = "Endpoint of the AcmeCloud EKS cluster"
-  value       = module.eks.cluster_endpoint
+  value       = var.enable_eks ? module.eks[0].cluster_endpoint : null
 }
 
 output "eks_cluster_security_group_id" {
   description = "Security group associated with the EKS cluster"
-  value       = module.eks.cluster_security_group_id
+  value       = var.enable_eks ? module.eks[0].cluster_security_group_id : null
 }
 
 output "eks_node_group_name" {
   description = "Name of the EKS managed node group"
-  value       = module.eks.node_group_name
+  value       = var.enable_eks ? module.eks[0].node_group_name : null
 }
 
 output "eks_node_role_arn" {
   description = "IAM role used by the EKS managed worker nodes"
-  value       = module.eks.node_role_arn
+  value       = var.enable_eks ? module.eks[0].node_role_arn : null
 }
 
 output "eks_oidc_provider_arn" {
   description = "ARN of the EKS IAM OIDC provider"
-  value       = module.eks.oidc_provider_arn
+  value       = var.enable_eks ? module.eks[0].oidc_provider_arn : null
 }
 
 output "eks_load_balancer_controller_role_arn" {
   description = "IAM role ARN used by the AWS Load Balancer Controller"
-  value       = module.eks.load_balancer_controller_role_arn
+  value       = var.enable_eks ? module.eks[0].load_balancer_controller_role_arn : null
 }

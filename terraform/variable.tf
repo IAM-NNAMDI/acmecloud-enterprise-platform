@@ -711,3 +711,13 @@ variable "app_health_path" {
   type        = string
   default     = "/"
 }
+
+# ============================================================
+# 11. AMAZON EKS
+# ============================================================
+
+variable "enable_eks" {
+  description = "Enable the Amazon EKS cluster and supporting resources."
+  type        = bool
+  default     = true
+}
