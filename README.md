@@ -342,3 +342,47 @@ The playbook applies:
 - Java 17 and Apache Tomcat configuration on the application tier
 
 Run the playbook again to verify idempotency. A successful second run should complete without unnecessary configuration changes.
+
+## Containerization — Docker and Amazon ECR
+
+The AcmeCloud web and application tiers are containerized using Docker, providing a consistent and portable runtime environment for the application.
+
+The containerized architecture consists of two services:
+
+- **Web Tier** — Nginx serves the AcmeCloud web interface and acts as a reverse proxy for application requests.
+- **Application Tier** — Apache Tomcat 10 hosts the Java/JSP application on port `8080`.
+
+Docker Compose is used to build and run the services on a dedicated bridge network. Only the Nginx web tier is published to the host, while the Tomcat application tier remains accessible only through the internal Docker network.
+
+### Container Architecture
+
+```text
+Client
+  |
+  | :8081
+  v
+Nginx Web Container
+  |
+  | Docker bridge network
+  v
+Tomcat Application Container
+     :8080
+```
+
+The application container includes a Docker health check. Docker Compose waits for the application to become healthy before starting the dependent web service.
+
+### Amazon ECR
+
+The AcmeCloud container images are stored in private Amazon Elastic Container Registry (ECR) repositories:
+
+- `acmecloud-web` — stores the Nginx web-tier container image.
+- `acmecloud-app` — stores the Tomcat application-tier container image.
+
+The ECR repositories are configured with immutable image tags and image scanning on push to improve image integrity and security.
+
+Docker BuildKit provenance metadata was disabled when building the images to ensure compatibility with the ECR image manifest format used during this phase.
+
+Current validated container releases:
+
+- `acmecloud-app:v3`
+- `acmecloud-web:v5`
