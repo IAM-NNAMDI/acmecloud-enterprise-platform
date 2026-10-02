@@ -386,3 +386,114 @@ Current validated container releases:
 
 - `acmecloud-app:v3`
 - `acmecloud-web:v5`
+
+
+## Phase 5 — Kubernetes and Amazon EKS
+
+Phase 5 migrated the containerized AcmeCloud web and application tiers from Docker Compose to Kubernetes and then deployed the same workloads to Amazon EKS.
+
+### Kubernetes Architecture
+
+The application uses a two-tier Kubernetes architecture:
+
+- **Web tier:** Nginx containers
+- **Application tier:** Apache Tomcat containers
+- **Container registry:** Amazon ECR
+- **Orchestration:** Kubernetes / Amazon EKS
+- **Ingress:** AWS Application Load Balancer
+- **Load balancer integration:** AWS Load Balancer Controller
+- **AWS authentication:** IAM Roles for Service Accounts (IRSA)
+- **Networking:** Private EKS worker nodes with public ALB ingress
+
+### Deployment Architecture
+
+```text
+Internet
+   |
+   v
+AWS Application Load Balancer
+   |
+   v
+Kubernetes Ingress
+   |
+   v
+acmecloud-web Service (ClusterIP)
+   |
+   +-- Nginx Pod
+   +-- Nginx Pod
+          |
+          | /app/
+          v
+acmecloud-app Service (ClusterIP)
+          |
+   +------+------+
+   |             |
+   v             v
+Tomcat Pod    Tomcat Pod
+```
+
+### Amazon ECR Integration
+
+The EKS worker nodes pull the AcmeCloud container images directly from private Amazon ECR repositories using their IAM permissions.
+
+Validated container images:
+
+- `acmecloud-web:v5`
+- `acmecloud-app:v3`
+
+No manually managed ECR image pull secret is required in the EKS environment.
+
+### AWS Load Balancer Controller
+
+The AWS Load Balancer Controller was installed using Helm.
+
+Terraform provisions the supporting AWS resources, including:
+
+- EKS OIDC identity provider
+- IAM policy for the AWS Load Balancer Controller
+- IAM role using IRSA
+- Public subnet tags for Kubernetes load balancer discovery
+
+The Kubernetes Ingress uses ALB IP target mode, allowing the Application Load Balancer to route directly to the Nginx pod IP addresses.
+
+### Validation
+
+The final EKS deployment was successfully validated with:
+
+- Two EKS worker nodes in `Ready` state
+- Two Nginx web pods running
+- Two Tomcat application pods running
+- Workloads distributed across both EKS worker nodes
+- `acmecloud-web` configured as a ClusterIP Service
+- `acmecloud-app` configured as a ClusterIP Service
+- Successful private Amazon ECR image pulls
+- AWS Load Balancer Controller running successfully
+- Internet-facing AWS Application Load Balancer provisioned through Kubernetes Ingress
+- ALB target type configured as `ip`
+- `/` returning HTTP 200
+- `/app/` returning HTTP 200 through Nginx to Tomcat
+- Final Terraform plan reporting no infrastructure drift
+
+The validated request path is:
+
+```text
+Internet
+    |
+    v
+AWS Application Load Balancer
+    |
+    v
+Kubernetes Ingress
+    |
+    v
+Nginx Web Tier
+    |
+    | /app/
+    v
+Kubernetes Service / DNS
+    |
+    v
+Tomcat Application Tier
+```
+
+This phase demonstrates Kubernetes workload orchestration, Amazon EKS, Amazon ECR integration, private worker-node networking, Kubernetes service discovery, Helm, IAM/OIDC integration, IRSA, and AWS Application Load Balancer ingress.

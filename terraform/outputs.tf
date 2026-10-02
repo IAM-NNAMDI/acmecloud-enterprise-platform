@@ -126,32 +126,32 @@ output "ec2_instance_profile" {
 
 output "web_alb_dns_name" {
   description = "Public Web ALB DNS name."
-  value       = module.alb.web_alb_dns_name
+  value       = var.enable_alb ? module.alb[0].web_alb_dns_name : null
 }
 
 output "web_alb_arn" {
   description = "Public Web ALB ARN."
-  value       = module.alb.web_alb_arn
+  value       = var.enable_alb ? module.alb[0].web_alb_arn : null
 }
 
 output "web_target_group_arn" {
   description = "Web Target Group ARN."
-  value       = module.alb.web_target_group_arn
+  value       = var.enable_alb ? module.alb[0].web_target_group_arn : null
 }
 
 output "internal_app_alb_dns_name" {
   description = "Internal Application ALB DNS."
-  value       = module.alb.app_alb_dns_name
+  value       = var.enable_alb ? module.alb[0].app_alb_dns_name : null
 }
 
 output "internal_app_alb_arn" {
   description = "Internal Application ALB ARN."
-  value       = module.alb.app_alb_arn
+  value       = var.enable_alb ? module.alb[0].app_alb_arn : null
 }
 
 output "app_target_group_arn" {
   description = "Application Target Group ARN."
-  value       = module.alb.app_target_group_arn
+  value       = var.enable_alb ? module.alb[0].app_target_group_arn : null
 }
 
 # ============================================================
@@ -160,27 +160,27 @@ output "app_target_group_arn" {
 
 output "database_endpoint" {
   description = "RDS MySQL endpoint."
-  value       = module.database.db_endpoint
+  value       = var.enable_data_tier ? module.database[0].db_endpoint : null
 }
 
 output "database_port" {
   description = "RDS MySQL port."
-  value       = module.database.db_port
+  value       = var.enable_data_tier ? module.database[0].db_port : null
 }
 
 output "database_name" {
   description = "Application database name."
-  value       = module.database.db_name
+  value       = var.enable_data_tier ? module.database[0].db_name : null
 }
 
 output "redis_primary_endpoint" {
   description = "Primary Redis endpoint."
-  value       = module.database.redis_primary_endpoint
+  value       = var.enable_data_tier ? module.database[0].redis_primary_endpoint : null
 }
 
 output "redis_reader_endpoint" {
   description = "Redis reader endpoint."
-  value       = module.database.redis_reader_endpoint
+  value       = var.enable_data_tier ? module.database[0].redis_reader_endpoint : null
 }
 
 # ============================================================
@@ -229,12 +229,50 @@ output "deployment_summary" {
     environment  = var.environment
     region       = var.aws_region
     vpc          = module.vpc.vpc_id
-    web_alb      = module.alb.web_alb_dns_name
+    web_alb      = var.enable_alb ? module.alb[0].web_alb_dns_name : null
     bastion_ip   = module.compute.bastion_public_ip
-    database     = module.database.db_endpoint
-    redis        = module.database.redis_primary_endpoint
+    database     = var.enable_data_tier ? module.database[0].db_endpoint : null
+    redis        = var.enable_data_tier ? module.database[0].redis_primary_endpoint : null
     bucket       = module.storage_identity.s3_bucket_name
     cognito_pool = module.storage_identity.cognito_user_pool_id
     lambda       = module.storage_identity.lambda_function_name
   }
+}
+# ==================================================
+# Amazon EKS
+# ==================================================
+
+output "eks_cluster_name" {
+  description = "Name of the AcmeCloud EKS cluster"
+  value       = module.eks.cluster_name
+}
+
+output "eks_cluster_endpoint" {
+  description = "Endpoint of the AcmeCloud EKS cluster"
+  value       = module.eks.cluster_endpoint
+}
+
+output "eks_cluster_security_group_id" {
+  description = "Security group associated with the EKS cluster"
+  value       = module.eks.cluster_security_group_id
+}
+
+output "eks_node_group_name" {
+  description = "Name of the EKS managed node group"
+  value       = module.eks.node_group_name
+}
+
+output "eks_node_role_arn" {
+  description = "IAM role used by the EKS managed worker nodes"
+  value       = module.eks.node_role_arn
+}
+
+output "eks_oidc_provider_arn" {
+  description = "ARN of the EKS IAM OIDC provider"
+  value       = module.eks.oidc_provider_arn
+}
+
+output "eks_load_balancer_controller_role_arn" {
+  description = "IAM role ARN used by the AWS Load Balancer Controller"
+  value       = module.eks.load_balancer_controller_role_arn
 }

@@ -48,8 +48,9 @@ resource "aws_subnet" "public" {
   tags = merge(
     local.common_tags,
     {
-      Name = "${local.name_prefix}-public-${count.index + 1}"
-      Tier = "Public"
+      Name                     = "${local.name_prefix}-public-${count.index + 1}"
+      Tier                     = "Public"
+      "kubernetes.io/role/elb" = "1"
     }
   )
 }
