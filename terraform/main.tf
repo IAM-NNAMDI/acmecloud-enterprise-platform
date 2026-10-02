@@ -99,6 +99,7 @@ module "compute" {
 # ------------------------------------------------------------
 
 module "alb" {
+  count  = var.enable_alb ? 1 : 0
   source = "./modules/Alb"
 
   project_name = var.project_name
@@ -134,6 +135,7 @@ module "alb" {
 # ------------------------------------------------------------
 
 module "database" {
+  count  = var.enable_data_tier ? 1 : 0
   source = "./modules/Database"
 
   project_name = var.project_name
@@ -188,4 +190,28 @@ module "storage_identity" {
   lambda_timeout     = var.lambda_timeout
 
   additional_tags = var.additional_tags
+}
+# ==================================================
+# Amazon EKS
+# ==================================================
+
+module "eks" {
+  source = "./modules/eks"
+
+  project_name = var.project_name
+  environment  = var.environment
+
+  private_subnet_ids = module.vpc.private_app_subnet_ids
+
+  node_instance_types = ["t3.medium"]
+  node_desired_size   = 2
+  node_min_size       = 2
+  node_max_size       = 4
+
+  tags = merge(
+    var.additional_tags,
+    {
+      Component = "eks"
+    }
+  )
 }

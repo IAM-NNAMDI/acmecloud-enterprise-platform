@@ -1,6 +1,7 @@
 #======================================================================
 # 1. IAM ROLE/ EC2 Assume Role Policy
 #======================================================================
+
 data "aws_iam_policy_document" "ec2_assume_role" {
 
   statement {
@@ -20,6 +21,7 @@ data "aws_iam_policy_document" "ec2_assume_role" {
 #======================================================================
 # 2. IAM ROLE
 #======================================================================
+
 resource "aws_iam_role" "ec2" {
 
   name = "${local.name_prefix}-ec2-role"
@@ -32,6 +34,7 @@ resource "aws_iam_role" "ec2" {
 #======================================================================
 # 3. SSM Policy Attachment
 #======================================================================
+
 resource "aws_iam_role_policy_attachment" "ssm" {
 
   role = aws_iam_role.ec2.name
@@ -39,17 +42,16 @@ resource "aws_iam_role_policy_attachment" "ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-
 #======================================================================
 # CloudWatch Agent Policy Attachment
 #======================================================================
+
 resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
 
   role = aws_iam_role.ec2.name
 
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
-
 
 #======================================================================
 # 4. EC2 Instance Profile
@@ -88,8 +90,9 @@ resource "aws_instance" "bastion" {
 }
 
 #======================================================================
-# 6. Apache lunch template
+# 6. Apache Launch Template
 #======================================================================
+
 resource "aws_launch_template" "web" {
 
   name_prefix = "${local.name_prefix}-web-"
@@ -127,6 +130,7 @@ resource "aws_launch_template" "web" {
 #======================================================================
 # 7. Apache Auto Scaling Group
 #======================================================================
+
 resource "aws_autoscaling_group" "web" {
 
   name = "${local.name_prefix}-web-asg"
@@ -151,11 +155,19 @@ resource "aws_autoscaling_group" "web" {
     value               = "${local.name_prefix}-apache"
     propagate_at_launch = true
   }
+
+  lifecycle {
+    ignore_changes = [
+      min_size,
+      desired_capacity
+    ]
+  }
 }
 
 #======================================================================
 # 8. Tomcat Launch Template
 #======================================================================
+
 resource "aws_launch_template" "app" {
 
   name_prefix = "${local.name_prefix}-app-"
@@ -218,5 +230,11 @@ resource "aws_autoscaling_group" "app" {
     value               = "${local.name_prefix}-tomcat"
     propagate_at_launch = true
   }
-}
 
+  lifecycle {
+    ignore_changes = [
+      min_size,
+      desired_capacity
+    ]
+  }
+}

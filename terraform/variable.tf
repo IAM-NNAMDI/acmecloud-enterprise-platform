@@ -192,6 +192,26 @@ variable "single_nat_gateway" {
   default     = true
 }
 
+# ============================================================
+# 9. LOAD BALANCER
+# ============================================================
+
+variable "enable_alb" {
+  description = "Enable Application Load Balancers and associated resources."
+  type        = bool
+  default     = true
+}
+
+# ============================================================
+# 10. DATA TIER
+# ============================================================
+
+variable "enable_data_tier" {
+  description = "Enable the RDS MySQL and ElastiCache Redis data tier."
+  type        = bool
+  default     = true
+}
+
 
 # ============================================================
 # 9. BASTION HOST
