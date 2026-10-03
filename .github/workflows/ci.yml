@@ -1,0 +1,84 @@
+name: AcmeCloud CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acmecloud-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  validate:
+    name: Validate Repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate required project files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_files=(
+            "docker/web/Dockerfile"
+            "docker/app/Dockerfile"
+            "docker/compose.yml"
+            "kubernetes/eks/namespace.yaml"
+            "kubernetes/eks/web/deployment.yaml"
+            "kubernetes/eks/web/service.yaml"
+            "kubernetes/eks/app/deployment.yaml"
+            "kubernetes/eks/app/service.yaml"
+            "kubernetes/eks/ingress.yaml"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "ERROR: Required file not found: $file"
+              exit 1
+            fi
+
+            echo "OK: $file"
+          done
+
+      - name: Validate Docker Compose configuration
+        run: docker compose -f docker/compose.yml config --quiet
+
+  docker-build:
+    name: Validate Docker Builds
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build application image
+        run: |
+          docker build \
+            -t acmecloud-app:ci \
+            docker/app
+
+      - name: Build web image
+        run: |
+          docker build \
+            -t acmecloud-web:ci \
+            docker/web
+
+      - name: Display built images
+        run: |
+          docker image ls \
+            --filter reference='acmecloud-*'
