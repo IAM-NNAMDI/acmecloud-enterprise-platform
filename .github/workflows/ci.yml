@@ -82,3 +82,38 @@ jobs:
         run: |
           docker image ls \
             --filter reference='acmecloud-*'
+
+  kubernetes-validate:
+    name: Validate Kubernetes Manifests
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Validate EKS Kubernetes manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Validating AcmeCloud EKS manifests..."
+
+          kubectl apply \
+            --dry-run=client \
+            --validate=false \
+            -f kubernetes/eks/namespace.yaml
+
+          kubectl apply \
+            --dry-run=client \
+            --validate=false \
+            -f kubernetes/eks/app/deployment.yaml \
+            -f kubernetes/eks/app/service.yaml \
+            -f kubernetes/eks/web/deployment.yaml \
+            -f kubernetes/eks/web/service.yaml \
+            -f kubernetes/eks/ingress.yaml
+
+          echo "Kubernetes manifest validation completed successfully."
