@@ -48,7 +48,7 @@ data "aws_iam_policy_document" "github_assume_role" {
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        "repo:${var.github_repository}:ref:refs/heads/main"
+        "repo:IAM-NNAMDI@117322301/acmecloud-enterprise-platform@1398869728:ref:refs/heads/main"
       ]
     }
   }
