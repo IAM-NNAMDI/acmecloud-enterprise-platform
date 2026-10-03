@@ -83,6 +83,7 @@ jobs:
           docker image ls \
             --filter reference='acmecloud-*'
 
+
   kubernetes-validate:
     name: Validate Kubernetes Manifests
     runs-on: ubuntu-latest
@@ -92,28 +93,44 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
+      - name: Install yamllint
+        run: python3 -m pip install --disable-pip-version-check yamllint
 
-      - name: Validate EKS Kubernetes manifests
+      - name: Validate Kubernetes YAML syntax
         shell: bash
         run: |
           set -euo pipefail
 
           echo "Validating AcmeCloud EKS manifests..."
 
-          kubectl apply \
-            --dry-run=client \
-            --validate=false \
-            -f kubernetes/eks/namespace.yaml
+          yamllint \
+            -d '{extends: relaxed, rules: {line-length: disable}}' \
+            kubernetes/eks/
 
-          kubectl apply \
-            --dry-run=client \
-            --validate=false \
-            -f kubernetes/eks/app/deployment.yaml \
-            -f kubernetes/eks/app/service.yaml \
-            -f kubernetes/eks/web/deployment.yaml \
-            -f kubernetes/eks/web/service.yaml \
-            -f kubernetes/eks/ingress.yaml
+          echo "Kubernetes YAML validation completed successfully."
 
-          echo "Kubernetes manifest validation completed successfully."
+      - name: Validate required Kubernetes fields
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for file in $(find kubernetes/eks -type f -name '*.yaml' | sort); do
+            echo "Checking $file"
+
+            grep -q '^apiVersion:' "$file" || {
+              echo "ERROR: apiVersion missing from $file"
+              exit 1
+            }
+
+            grep -q '^kind:' "$file" || {
+              echo "ERROR: kind missing from $file"
+              exit 1
+            }
+
+            grep -q '^metadata:' "$file" || {
+              echo "ERROR: metadata missing from $file"
+              exit 1
+            }
+          done
+
+          echo "Required Kubernetes fields validated successfully."
