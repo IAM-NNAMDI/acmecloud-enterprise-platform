@@ -277,3 +277,18 @@ output "eks_load_balancer_controller_role_arn" {
   description = "IAM role ARN used by the AWS Load Balancer Controller"
   value       = var.enable_eks ? module.eks[0].load_balancer_controller_role_arn : null
 }
+
+
+# ============================================================
+# GitHub Actions CI/CD
+# ============================================================
+
+output "github_actions_role_arn" {
+  description = "IAM role ARN used by GitHub Actions through OIDC."
+  value       = module.github_oidc.role_arn
+}
+
+output "github_oidc_provider_arn" {
+  description = "GitHub Actions IAM OIDC provider ARN."
+  value       = module.github_oidc.oidc_provider_arn
+}

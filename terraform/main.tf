@@ -216,3 +216,28 @@ module "eks" {
     }
   )
 }
+
+
+# ============================================================
+# GitHub Actions OIDC / CI-CD
+# ============================================================
+
+module "github_oidc" {
+  source = "./modules/github-oidc"
+
+  project_name      = var.project_name
+  environment       = var.environment
+  github_repository = "IAM-NNAMDI/acmecloud-enterprise-platform"
+
+  ecr_repository_arns = [
+    "arn:aws:ecr:us-east-1:944777361548:repository/acmecloud-web",
+    "arn:aws:ecr:us-east-1:944777361548:repository/acmecloud-app"
+  ]
+
+  tags = merge(
+    var.additional_tags,
+    {
+      Component = "cicd"
+    }
+  )
+}
