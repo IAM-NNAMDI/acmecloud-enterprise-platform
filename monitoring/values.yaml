@@ -1,0 +1,88 @@
+# AcmeCloud Enterprise Platform
+# kube-prometheus-stack Helm configuration
+
+# ------------------------------------------------------------
+# Grafana
+# ------------------------------------------------------------
+
+grafana:
+  enabled: true
+
+  service:
+    type: ClusterIP
+
+  persistence:
+    enabled: false
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+# ------------------------------------------------------------
+# Prometheus
+# ------------------------------------------------------------
+
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    retention: 7d
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+    storageSpec: {}
+
+# ------------------------------------------------------------
+# Alertmanager
+# ------------------------------------------------------------
+
+alertmanager:
+  enabled: true
+
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# ------------------------------------------------------------
+# Kubernetes Metrics
+# ------------------------------------------------------------
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+
+# ------------------------------------------------------------
+# Amazon EKS Control Plane
+# ------------------------------------------------------------
+# The EKS control plane is managed by AWS. These components are not
+# directly exposed to Prometheus running inside the worker-node cluster.
+
+kubeEtcd:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+# kube-proxy runs on the EKS worker nodes and remains monitored.
+kubeProxy:
+  enabled: true

@@ -246,12 +246,118 @@ echo "Root endpoint:     HTTP ${ROOT_CODE}"
 echo "Application path:  HTTP ${APP_CODE}"
 
 echo
-echo "=== KUBERNETES STATUS ==="
+# ------------------------------------------------------------
+# 8. Restore Prometheus / Grafana monitoring
+# ------------------------------------------------------------
+
+echo "=== STEP 8: RESTORE MONITORING STACK ==="
+
+MONITORING_DIR="${PROJECT_ROOT}/monitoring"
+MONITORING_NAMESPACE="monitoring"
+MONITORING_RELEASE="acmecloud-monitoring"
+PROMETHEUS_CHART_VERSION="91.9.0"
+
+echo
+echo "Adding Prometheus Community Helm repository..."
+
+helm repo add prometheus-community \
+    https://prometheus-community.github.io/helm-charts \
+    --force-update
+
+helm repo update
+
+echo
+echo "Installing kube-prometheus-stack ${PROMETHEUS_CHART_VERSION}..."
+
+helm upgrade --install "${MONITORING_RELEASE}" \
+    prometheus-community/kube-prometheus-stack \
+    --version "${PROMETHEUS_CHART_VERSION}" \
+    --namespace "${MONITORING_NAMESPACE}" \
+    --create-namespace \
+    -f "${MONITORING_DIR}/values.yaml" \
+    --wait \
+    --timeout 10m
+
+echo
+echo "Applying AcmeCloud Prometheus alert rules..."
+
+kubectl apply \
+    -f "${MONITORING_DIR}/alerts/acmecloud-alerts.yaml"
+
+echo
+echo "Provisioning AcmeCloud Grafana dashboard..."
+
+kubectl create configmap acmecloud-grafana-dashboard \
+    --namespace "${MONITORING_NAMESPACE}" \
+    --from-file=acmecloud-overview.json="${MONITORING_DIR}/dashboards/acmecloud-overview.json" \
+    --dry-run=client \
+    -o yaml \
+    | kubectl label \
+        --local \
+        -f - \
+        grafana_dashboard=1 \
+        -o yaml \
+    | kubectl apply -f -
+
+echo
+echo "Waiting for monitoring workloads..."
+
+kubectl wait \
+    --for=condition=Ready \
+    pods \
+    --all \
+    -n "${MONITORING_NAMESPACE}" \
+    --timeout=10m
+
+echo
+echo "=== MONITORING STATUS ==="
+
+helm list -n "${MONITORING_NAMESPACE}"
+
+echo
+kubectl get pods \
+    -n "${MONITORING_NAMESPACE}" \
+    -o wide
+
+echo
+kubectl get prometheus,alertmanager \
+    -n "${MONITORING_NAMESPACE}"
+
+echo
+echo "Custom PrometheusRule:"
+kubectl get prometheusrule \
+    acmecloud-platform-alerts \
+    -n "${MONITORING_NAMESPACE}"
+
+echo
+echo "Custom Grafana dashboard:"
+kubectl get configmap \
+    acmecloud-grafana-dashboard \
+    -n "${MONITORING_NAMESPACE}" \
+    --show-labels
+
+echo
+
+# ------------------------------------------------------------
+# 9. Final environment status
+# ------------------------------------------------------------
+
+echo "=== STEP 9: FINAL ENVIRONMENT STATUS ==="
 
 kubectl get nodes
+
+echo
 kubectl get pods -n "${NAMESPACE}" -o wide
+
+echo
 kubectl get svc -n "${NAMESPACE}"
+
+echo
 kubectl get ingress -n "${NAMESPACE}"
+
+echo
+echo "Monitoring namespace:"
+kubectl get pods -n "${MONITORING_NAMESPACE}"
 
 echo
 echo "============================================================"
@@ -260,3 +366,9 @@ echo "============================================================"
 echo
 echo "Application URL:"
 echo "http://${ALB_DNS}"
+echo
+echo "Monitoring:"
+echo "Prometheus + Grafana + Alertmanager restored successfully."
+echo
+echo "Grafana access:"
+echo "kubectl -n monitoring port-forward svc/acmecloud-monitoring-grafana 3000:80"

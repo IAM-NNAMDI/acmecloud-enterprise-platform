@@ -1,0 +1,107 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: acmecloud-platform-alerts
+  namespace: monitoring
+  labels:
+    release: acmecloud-monitoring
+spec:
+  groups:
+
+    # ============================================================
+    # EKS Node Alerts
+    # ============================================================
+    - name: acmecloud.node.rules
+      rules:
+
+        - alert: AcmeCloudNodeUnavailable
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            service: acmecloud
+          annotations:
+            summary: "Kubernetes node is unavailable"
+            description: "Node {{ $labels.node }} has not been Ready for more than 5 minutes."
+
+        - alert: AcmeCloudNodeHighCPU
+          expr: |
+            (
+              1 -
+              avg by (instance) (
+                rate(node_cpu_seconds_total{mode="idle"}[5m])
+              )
+            ) * 100 > 85
+          for: 10m
+          labels:
+            severity: warning
+            service: acmecloud
+          annotations:
+            summary: "High CPU usage on Kubernetes node"
+            description: "Node {{ $labels.instance }} has exceeded 85% CPU usage for 10 minutes."
+
+        - alert: AcmeCloudNodeHighMemory
+          expr: |
+            (
+              1 -
+              (
+                node_memory_MemAvailable_bytes
+                /
+                node_memory_MemTotal_bytes
+              )
+            ) * 100 > 85
+          for: 10m
+          labels:
+            severity: warning
+            service: acmecloud
+          annotations:
+            summary: "High memory usage on Kubernetes node"
+            description: "Node {{ $labels.instance }} has exceeded 85% memory usage for 10 minutes."
+
+    # ============================================================
+    # AcmeCloud Workload Alerts
+    # ============================================================
+    - name: acmecloud.workload.rules
+      rules:
+
+        - alert: AcmeCloudContainerRestarting
+          expr: |
+            increase(
+              kube_pod_container_status_restarts_total{
+                namespace="acmecloud"
+              }[15m]
+            ) > 2
+          for: 5m
+          labels:
+            severity: warning
+            service: acmecloud
+          annotations:
+            summary: "AcmeCloud container is repeatedly restarting"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has restarted repeatedly."
+
+        - alert: AcmeCloudDeploymentReplicasUnavailable
+          expr: |
+            kube_deployment_status_replicas_unavailable{
+              namespace="acmecloud"
+            } > 0
+          for: 5m
+          labels:
+            severity: critical
+            service: acmecloud
+          annotations:
+            summary: "AcmeCloud deployment has unavailable replicas"
+            description: "Deployment {{ $labels.deployment }} has unavailable replicas for more than 5 minutes."
+
+        - alert: AcmeCloudPodNotReady
+          expr: |
+            kube_pod_status_ready{
+              namespace="acmecloud",
+              condition="true"
+            } == 0
+          for: 5m
+          labels:
+            severity: warning
+            service: acmecloud
+          annotations:
+            summary: "AcmeCloud pod is not Ready"
+            description: "Pod {{ $labels.pod }} has not been Ready for more than 5 minutes."
