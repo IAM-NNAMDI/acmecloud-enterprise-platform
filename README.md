@@ -497,3 +497,21 @@ Tomcat Application Tier
 ```
 
 This phase demonstrates Kubernetes workload orchestration, Amazon EKS, Amazon ECR integration, private worker-node networking, Kubernetes service discovery, Helm, IAM/OIDC integration, IRSA, and AWS Application Load Balancer ingress.
+
+
+## Phase 7 — GitHub Actions CI/CD
+
+Phase 7 implements the AcmeCloud automated CI/CD pipeline using GitHub Actions.
+
+The pipeline validates the repository and Kubernetes manifests, validates Docker builds, scans container images with Trivy, authenticates to AWS through GitHub OIDC, publishes immutable commit-SHA-tagged images to Amazon ECR, and deploys releases to Amazon EKS.
+
+GitHub Actions uses the dedicated `acmecloud-production-github-actions` IAM role without storing long-lived AWS access keys. Application deployment authorization is scoped to the `acmecloud` Kubernetes namespace.
+
+Successful deployments are verified using Kubernetes rollout status. The pipeline also contains rollback controls for failed rollout verification.
+
+The Kubernetes rollback procedure was tested using deliberately invalid ECR image tags. Existing healthy replicas remained available while replacement pods entered `ErrImagePull`, after which both deployments were successfully restored to the previous known-good release.
+
+Detailed CI/CD documentation:
+
+    docs/cicd/README.md
+    docs/cicd/architecture.md
