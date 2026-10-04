@@ -10,6 +10,12 @@ on:
       - main
 
   workflow_dispatch:
+    inputs:
+      deploy_to_eks:
+        description: Deploy the release to the AcmeCloud EKS environment
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -214,7 +220,10 @@ jobs:
     name: Test AWS OIDC Authentication
     runs-on: ubuntu-latest
 
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' &&
+       inputs.deploy_to_eks == true)
 
     permissions:
       contents: read
@@ -243,7 +252,10 @@ jobs:
       - docker-build
       - container-security
 
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' &&
+       inputs.deploy_to_eks == true)
 
     permissions:
       contents: read
@@ -350,10 +362,15 @@ jobs:
     name: Deploy to Amazon EKS
     runs-on: ubuntu-latest
 
+    environment:
+      name: production
+
     needs:
       - publish-ecr
 
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy_to_eks == true
 
     permissions:
       contents: read
