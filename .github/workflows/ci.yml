@@ -387,6 +387,7 @@ jobs:
             web="$WEB_IMAGE"
 
       - name: Verify deployment rollout
+        id: verify-rollout
         shell: bash
         run: |
           set -euo pipefail
@@ -398,6 +399,39 @@ jobs:
           kubectl -n "$K8S_NAMESPACE" \
             rollout status deployment/acmecloud-web \
             --timeout=5m
+
+      - name: Roll back failed deployment
+        if: failure() && steps.verify-rollout.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Deployment verification failed."
+          echo "Rolling AcmeCloud back to the previous release..."
+
+          kubectl -n "$K8S_NAMESPACE" \
+            rollout undo deployment/acmecloud-app
+
+          kubectl -n "$K8S_NAMESPACE" \
+            rollout undo deployment/acmecloud-web
+
+          echo
+          echo "=== Verifying rollback ==="
+
+          kubectl -n "$K8S_NAMESPACE" \
+            rollout status deployment/acmecloud-app \
+            --timeout=5m
+
+          kubectl -n "$K8S_NAMESPACE" \
+            rollout status deployment/acmecloud-web \
+            --timeout=5m
+
+          echo
+          echo "=== Images after rollback ==="
+
+          kubectl -n "$K8S_NAMESPACE" \
+            get deployments \
+            -o custom-columns='DEPLOYMENT:.metadata.name,IMAGE:.spec.template.spec.containers[*].image'
 
       - name: Verify deployed images
         shell: bash
