@@ -234,8 +234,8 @@ module "github_oidc" {
   eks_cluster_arn = var.enable_eks ? "arn:aws:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.project_name}-${var.environment}-eks" : null
 
   ecr_repository_arns = [
-    "arn:aws:ecr:us-east-1:944777361548:repository/acmecloud-web",
-    "arn:aws:ecr:us-east-1:944777361548:repository/acmecloud-app"
+    "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}-web",
+    "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}-app"
   ]
 
   tags = merge(
