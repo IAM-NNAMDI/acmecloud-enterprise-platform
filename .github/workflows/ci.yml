@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+env:
+  AWS_REGION: us-east-1
+  AWS_ROLE_ARN: arn:aws:iam::944777361548:role/acmecloud-production-github-actions
+
 concurrency:
   group: acmecloud-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -192,8 +196,8 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::944777361548:role/acmecloud-production-github-actions
-          aws-region: us-east-1
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Verify AWS identity
         run: |
@@ -215,8 +219,6 @@ jobs:
       id-token: write
 
     env:
-      AWS_REGION: us-east-1
-      AWS_ACCOUNT_ID: "944777361548"
       APP_REPOSITORY: acmecloud-app
       WEB_REPOSITORY: acmecloud-web
 
@@ -227,8 +229,14 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::944777361548:role/acmecloud-production-github-actions
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve AWS account ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_ENV"
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -321,8 +329,6 @@ jobs:
       id-token: write
 
     env:
-      AWS_REGION: us-east-1
-      AWS_ACCOUNT_ID: "944777361548"
       EKS_CLUSTER_NAME: acmecloud-production-eks
       K8S_NAMESPACE: acmecloud
       APP_REPOSITORY: acmecloud-app
@@ -335,8 +341,14 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::944777361548:role/acmecloud-production-github-actions
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve AWS account ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_ENV"
 
       - name: Configure EKS kubeconfig
         shell: bash
