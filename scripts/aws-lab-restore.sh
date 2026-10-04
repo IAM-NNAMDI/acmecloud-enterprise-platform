@@ -23,6 +23,7 @@ EKS_DIR="${REPO_ROOT}/kubernetes/eks"
 REGION="us-east-1"
 CLUSTER_NAME="acmecloud-production-eks"
 NAMESPACE="acmecloud"
+LBC_CHART_VERSION="3.5.0"
 
 echo "============================================================"
 echo " AcmeCloud AWS Lab Restore"
@@ -117,6 +118,7 @@ helm repo update
 
 helm upgrade --install aws-load-balancer-controller \
     eks/aws-load-balancer-controller \
+    --version "${LBC_CHART_VERSION}" \
     --namespace kube-system \
     --set clusterName="${CLUSTER_NAME}" \
     --set serviceAccount.create=true \
