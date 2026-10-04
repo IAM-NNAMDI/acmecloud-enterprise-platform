@@ -1,14 +1,22 @@
 FROM nginx:1.31.6
 
+# Non-root Nginx runtime configuration
+RUN sed -i 's|^pid .*|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf
+
 # Apply available security updates
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get remove -y curl libxml2 libexpat1 \
     && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && chown -R nginx:nginx /usr/share/nginx/html \
+    && chown -R nginx:nginx /var/cache/nginx \
+    && chown -R nginx:nginx /var/run
 
-COPY index.html /usr/share/nginx/html/index.html
+COPY --chown=nginx:nginx index.html /usr/share/nginx/html/index.html
 
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+USER nginx
+
+EXPOSE 8080

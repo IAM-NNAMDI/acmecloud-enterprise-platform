@@ -9,6 +9,17 @@ RUN apt-get update \
 RUN rm -rf /usr/local/tomcat/webapps/ROOT
 
 # Deploy the AcmeCloud application
-COPY src/ /usr/local/tomcat/webapps/ROOT/
+COPY --chown=1000:1000 src/ /usr/local/tomcat/webapps/ROOT/
+
+# Allow the non-root Tomcat runtime user to write only to runtime directories.
+RUN mkdir -p /usr/local/tomcat/conf/Catalina/localhost \
+    && chown -R 1000:1000 \
+      /usr/local/tomcat/logs \
+      /usr/local/tomcat/temp \
+      /usr/local/tomcat/work \
+      /usr/local/tomcat/webapps \
+      /usr/local/tomcat/conf/Catalina
+
+USER 1000:1000
 
 EXPOSE 8080
