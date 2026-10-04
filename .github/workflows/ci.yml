@@ -418,6 +418,21 @@ jobs:
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
           echo "Deploying AcmeCloud release: $IMAGE_TAG"
 
+      - name: Capture current production images
+        id: current-images
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APP_IMAGE=$(kubectl -n "$K8S_NAMESPACE" get deployment acmecloud-app -o jsonpath='{.spec.template.spec.containers[0].image}')
+          WEB_IMAGE=$(kubectl -n "$K8S_NAMESPACE" get deployment acmecloud-web -o jsonpath='{.spec.template.spec.containers[0].image}')
+
+          test -n "$APP_IMAGE"
+          test -n "$WEB_IMAGE"
+
+          echo "app_image=$APP_IMAGE" >> "$GITHUB_OUTPUT"
+          echo "web_image=$WEB_IMAGE" >> "$GITHUB_OUTPUT"
+
       - name: Deploy Kubernetes resources
         shell: bash
         run: |
@@ -463,17 +478,22 @@ jobs:
       - name: Roll back failed deployment
         if: failure() && steps.verify-rollout.outcome == 'failure'
         shell: bash
+        env:
+          PREVIOUS_APP_IMAGE: ${{ steps.current-images.outputs.app_image }}
+          PREVIOUS_WEB_IMAGE: ${{ steps.current-images.outputs.web_image }}
         run: |
           set -euo pipefail
 
           echo "Deployment verification failed."
-          echo "Rolling AcmeCloud back to the previous release..."
+          echo "Restoring previous AcmeCloud release..."
 
           kubectl -n "$K8S_NAMESPACE" \
-            rollout undo deployment/acmecloud-app
+            set image deployment/acmecloud-app \
+            app="$PREVIOUS_APP_IMAGE"
 
           kubectl -n "$K8S_NAMESPACE" \
-            rollout undo deployment/acmecloud-web
+            set image deployment/acmecloud-web \
+            web="$PREVIOUS_WEB_IMAGE"
 
           echo
           echo "=== Verifying rollback ==="
