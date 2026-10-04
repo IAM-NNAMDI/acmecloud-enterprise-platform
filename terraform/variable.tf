@@ -482,9 +482,22 @@ variable "db_username" {
 
 
 variable "db_password" {
-  description = "Master password for the RDS database."
+  description = "Master password for the RDS database. Supply securely with TF_VAR_db_password when enable_data_tier is true."
   type        = string
   sensitive   = true
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      !var.enable_data_tier ||
+      (
+        var.db_password != null &&
+        length(var.db_password) >= 12
+      )
+    )
+    error_message = "db_password must be supplied securely and contain at least 12 characters when enable_data_tier is true."
+  }
 }
 
 
