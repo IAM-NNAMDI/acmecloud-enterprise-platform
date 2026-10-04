@@ -3,6 +3,10 @@ kind: Service
 metadata:
   name: acmecloud-web
   namespace: acmecloud
+  labels:
+    app: acmecloud-web
+    app.kubernetes.io/name: acmecloud-web
+    app.kubernetes.io/part-of: acmecloud-enterprise-platform
 spec:
   type: ClusterIP
   selector:

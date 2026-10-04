@@ -47,6 +47,9 @@ jobs:
             "kubernetes/eks/app/deployment.yaml"
             "kubernetes/eks/app/service.yaml"
             "kubernetes/eks/ingress.yaml"
+            "monitoring/values.yaml"
+            "monitoring/alerts/acmecloud-alerts.yaml"
+            "monitoring/dashboards/acmecloud-overview.json"
           )
 
           for file in "${required_files[@]}"; do
@@ -112,6 +115,34 @@ jobs:
             kubernetes/eks/
 
           echo "Kubernetes YAML validation completed successfully."
+
+      - name: Validate monitoring configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Validating monitoring YAML..."
+
+          yamllint \
+            -d '{extends: relaxed, rules: {line-length: disable}}' \
+            monitoring/values.yaml \
+            monitoring/alerts/acmecloud-alerts.yaml
+
+          echo "Validating Grafana dashboard JSON..."
+
+          python3 - <<'PYJSON'
+          import json
+          from pathlib import Path
+
+          dashboard = Path("monitoring/dashboards/acmecloud-overview.json")
+
+          with dashboard.open() as handle:
+              json.load(handle)
+
+          print(f"Valid JSON: {dashboard}")
+          PYJSON
+
+          echo "Monitoring configuration validation completed successfully."
 
       - name: Validate required Kubernetes fields
         shell: bash
