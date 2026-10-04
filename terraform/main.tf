@@ -204,6 +204,8 @@ module "eks" {
 
   private_subnet_ids = module.vpc.private_app_subnet_ids
 
+  github_actions_role_arn = module.github_oidc.role_arn
+
   node_instance_types = ["t3.medium"]
   node_desired_size   = 2
   node_min_size       = 2
@@ -228,6 +230,8 @@ module "github_oidc" {
   project_name      = var.project_name
   environment       = var.environment
   github_repository = "IAM-NNAMDI/acmecloud-enterprise-platform"
+
+  eks_cluster_arn = var.enable_eks ? "arn:aws:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.project_name}-${var.environment}-eks" : null
 
   ecr_repository_arns = [
     "arn:aws:ecr:us-east-1:944777361548:repository/acmecloud-web",

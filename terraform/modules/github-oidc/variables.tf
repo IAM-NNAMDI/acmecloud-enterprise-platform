@@ -23,3 +23,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "eks_cluster_arn" {
+  description = "ARN of the EKS cluster GitHub Actions may deploy to. Null when EKS is disabled."
+  type        = string
+  default     = null
+}

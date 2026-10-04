@@ -220,3 +220,34 @@ resource "aws_iam_role_policy_attachment" "load_balancer_controller" {
   role       = aws_iam_role.load_balancer_controller.name
   policy_arn = aws_iam_policy.load_balancer_controller.arn
 }
+
+
+# ============================================================
+# GitHub Actions — EKS deployment authorization
+# ============================================================
+
+resource "aws_eks_access_entry" "github_actions" {
+  count = var.github_actions_role_arn != null ? 1 : 0
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = var.github_actions_role_arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "github_actions" {
+  count = var.github_actions_role_arn != null ? 1 : 0
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = var.github_actions_role_arn
+
+  policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
+
+  access_scope {
+    type       = "namespace"
+    namespaces = ["acmecloud"]
+  }
+
+  depends_on = [
+    aws_eks_access_entry.github_actions
+  ]
+}

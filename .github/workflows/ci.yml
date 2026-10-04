@@ -306,3 +306,129 @@ jobs:
             echo "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$WEB_REPOSITORY:$IMAGE_TAG"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-eks:
+    name: Deploy to Amazon EKS
+    runs-on: ubuntu-latest
+
+    needs:
+      - publish-ecr
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      AWS_REGION: us-east-1
+      AWS_ACCOUNT_ID: "944777361548"
+      EKS_CLUSTER_NAME: acmecloud-production-eks
+      K8S_NAMESPACE: acmecloud
+      APP_REPOSITORY: acmecloud-app
+      WEB_REPOSITORY: acmecloud-web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::944777361548:role/acmecloud-production-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure EKS kubeconfig
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws eks update-kubeconfig \
+            --region "$AWS_REGION" \
+            --name "$EKS_CLUSTER_NAME"
+
+      - name: Generate deployment image tag
+        id: image-tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE_TAG="${GITHUB_SHA::12}"
+
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "Deploying AcmeCloud release: $IMAGE_TAG"
+
+      - name: Deploy Kubernetes resources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          kubectl apply -f kubernetes/eks/namespace.yaml
+          kubectl apply -f kubernetes/eks/app/service.yaml
+          kubectl apply -f kubernetes/eks/app/deployment.yaml
+          kubectl apply -f kubernetes/eks/web/service.yaml
+          kubectl apply -f kubernetes/eks/web/deployment.yaml
+
+      - name: Deploy release images
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ steps.image-tag.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+
+          APP_IMAGE="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_REPOSITORY:$IMAGE_TAG"
+          WEB_IMAGE="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$WEB_REPOSITORY:$IMAGE_TAG"
+
+          kubectl -n "$K8S_NAMESPACE" \
+            set image deployment/acmecloud-app \
+            app="$APP_IMAGE"
+
+          kubectl -n "$K8S_NAMESPACE" \
+            set image deployment/acmecloud-web \
+            web="$WEB_IMAGE"
+
+      - name: Verify deployment rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          kubectl -n "$K8S_NAMESPACE" \
+            rollout status deployment/acmecloud-app \
+            --timeout=5m
+
+          kubectl -n "$K8S_NAMESPACE" \
+            rollout status deployment/acmecloud-web \
+            --timeout=5m
+
+      - name: Verify deployed images
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "=== Deployments ==="
+          kubectl -n "$K8S_NAMESPACE" get deployments -o wide
+
+          echo
+          echo "=== Pods ==="
+          kubectl -n "$K8S_NAMESPACE" get pods -o wide
+
+          echo
+          echo "=== Deployed Images ==="
+          kubectl -n "$K8S_NAMESPACE" \
+            get deployments \
+            -o custom-columns='DEPLOYMENT:.metadata.name,IMAGE:.spec.template.spec.containers[*].image'
+
+      - name: Publish deployment summary
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ steps.image-tag.outputs.image_tag }}
+        run: |
+          {
+            echo "## AcmeCloud EKS Deployment"
+            echo
+            echo "- Cluster: \`$EKS_CLUSTER_NAME\`"
+            echo "- Namespace: \`$K8S_NAMESPACE\`"
+            echo "- Release: \`$IMAGE_TAG\`"
+            echo "- App image: \`$APP_REPOSITORY:$IMAGE_TAG\`"
+            echo "- Web image: \`$WEB_REPOSITORY:$IMAGE_TAG\`"
+          } >> "$GITHUB_STEP_SUMMARY"

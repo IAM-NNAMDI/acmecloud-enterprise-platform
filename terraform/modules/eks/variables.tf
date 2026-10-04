@@ -48,3 +48,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "github_actions_role_arn" {
+  description = "GitHub Actions IAM role permitted to deploy workloads to the EKS cluster."
+  type        = string
+  default     = null
+}

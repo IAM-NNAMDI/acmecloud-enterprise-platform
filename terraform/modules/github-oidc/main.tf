@@ -104,3 +104,33 @@ resource "aws_iam_role_policy" "ecr_push" {
   role   = aws_iam_role.github_actions.id
   policy = data.aws_iam_policy_document.ecr_push.json
 }
+
+
+# ============================================================
+# Amazon EKS deployment access
+# ============================================================
+
+data "aws_iam_policy_document" "eks_deploy" {
+  count = var.eks_cluster_arn != null ? 1 : 0
+
+  statement {
+    sid    = "DescribeAcmeCloudEKS"
+    effect = "Allow"
+
+    actions = [
+      "eks:DescribeCluster"
+    ]
+
+    resources = [
+      var.eks_cluster_arn
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "eks_deploy" {
+  count = var.eks_cluster_arn != null ? 1 : 0
+
+  name   = "${local.role_name}-eks"
+  role   = aws_iam_role.github_actions.id
+  policy = data.aws_iam_policy_document.eks_deploy[0].json
+}
