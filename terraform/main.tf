@@ -231,7 +231,7 @@ module "github_oidc" {
   environment       = var.environment
   github_repository = "IAM-NNAMDI/acmecloud-enterprise-platform"
 
-  eks_cluster_arn = var.enable_eks ? "arn:aws:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.project_name}-${var.environment}-eks" : null
+  eks_cluster_arn = "arn:aws:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.project_name}-${var.environment}-eks"
 
   ecr_repository_arns = [
     "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}-web",
