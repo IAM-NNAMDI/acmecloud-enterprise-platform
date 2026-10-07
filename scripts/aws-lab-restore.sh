@@ -25,9 +25,54 @@ CLUSTER_NAME="acmecloud-production-eks"
 NAMESPACE="acmecloud"
 LBC_CHART_VERSION="3.5.0"
 
+AWS_ACCOUNT_ID="944777361548"
+APP_REPOSITORY="acmecloud-app"
+WEB_REPOSITORY="acmecloud-web"
+ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
+RELEASE_TAG="${RELEASE_TAG:-}"
+
 echo "============================================================"
 echo " AcmeCloud AWS Lab Restore"
 echo "============================================================"
+echo
+
+# ------------------------------------------------------------
+# Preflight: validate immutable application release
+# ------------------------------------------------------------
+
+echo "=== PREFLIGHT: VALIDATE RELEASE ==="
+
+if [[ -z "${RELEASE_TAG}" ]]; then
+    echo "ERROR: RELEASE_TAG is required."
+    echo "Example:"
+    echo "RELEASE_TAG=e5246232ba1e ./scripts/aws-lab-restore.sh"
+    exit 1
+fi
+
+if [[ ! "${RELEASE_TAG}" =~ ^[0-9a-f]{12}$ ]]; then
+    echo "ERROR: RELEASE_TAG must be a 12-character lowercase Git SHA."
+    exit 1
+fi
+
+echo "Release tag: ${RELEASE_TAG}"
+echo "Checking immutable images in Amazon ECR..."
+
+aws ecr describe-images \
+    --repository-name "${APP_REPOSITORY}" \
+    --image-ids imageTag="${RELEASE_TAG}" \
+    --region "${REGION}" \
+    >/dev/null
+
+echo "Application image: FOUND"
+
+aws ecr describe-images \
+    --repository-name "${WEB_REPOSITORY}" \
+    --image-ids imageTag="${RELEASE_TAG}" \
+    --region "${REGION}" \
+    >/dev/null
+
+echo "Web image:         FOUND"
+echo "Release validation: PASS"
 echo
 
 cd "${TF_DIR}"
@@ -140,12 +185,35 @@ echo
 # 5. Restore Kubernetes workloads
 # ------------------------------------------------------------
 
-echo "=== STEP 5: DEPLOY ACMECLOUD WORKLOADS ==="
+echo "=== STEP 5: DEPLOY ACMECLOUD RELEASE ${RELEASE_TAG} ==="
 
-kubectl apply -f "${EKS_DIR}/namespace.yaml"
+RELEASE_DIR="$(mktemp -d)"
+trap 'rm -rf "${RELEASE_DIR}"' EXIT
 
-kubectl apply -f "${EKS_DIR}/app/"
-kubectl apply -f "${EKS_DIR}/web/"
+cp -R "${EKS_DIR}/." "${RELEASE_DIR}/"
+
+cat >> "${RELEASE_DIR}/kustomization.yaml" <<EOF
+
+images:
+  - name: ${ECR_REGISTRY}/${APP_REPOSITORY}
+    newTag: ${RELEASE_TAG}
+  - name: ${ECR_REGISTRY}/${WEB_REPOSITORY}
+    newTag: ${RELEASE_TAG}
+EOF
+
+RELEASE_MANIFEST="${RELEASE_DIR}/acmecloud-release.yaml"
+
+kubectl kustomize "${RELEASE_DIR}" > "${RELEASE_MANIFEST}"
+
+if grep -q 'RELEASE_TAG' "${RELEASE_MANIFEST}"; then
+    echo "ERROR: unresolved RELEASE_TAG remains in rendered manifest."
+    exit 1
+fi
+
+echo "Release images:"
+grep 'image:' "${RELEASE_MANIFEST}"
+
+kubectl apply -f "${RELEASE_MANIFEST}"
 
 echo
 echo "Waiting for application deployment..."

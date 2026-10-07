@@ -433,33 +433,38 @@ jobs:
           echo "app_image=$APP_IMAGE" >> "$GITHUB_OUTPUT"
           echo "web_image=$WEB_IMAGE" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy Kubernetes resources
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          kubectl apply -f kubernetes/eks/app/service.yaml
-          kubectl apply -f kubernetes/eks/app/deployment.yaml
-          kubectl apply -f kubernetes/eks/web/service.yaml
-          kubectl apply -f kubernetes/eks/web/deployment.yaml
-
-      - name: Deploy release images
+      - name: Render and deploy immutable release
         shell: bash
         env:
           IMAGE_TAG: ${{ steps.image-tag.outputs.image_tag }}
         run: |
           set -euo pipefail
 
-          APP_IMAGE="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_REPOSITORY:$IMAGE_TAG"
-          WEB_IMAGE="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$WEB_REPOSITORY:$IMAGE_TAG"
+          RELEASE_DIR="$(mktemp -d)"
+          trap 'rm -rf "$RELEASE_DIR"' EXIT
 
-          kubectl -n "$K8S_NAMESPACE" \
-            set image deployment/acmecloud-app \
-            app="$APP_IMAGE"
+          cp -R kubernetes/eks/. "$RELEASE_DIR/"
 
-          kubectl -n "$K8S_NAMESPACE" \
-            set image deployment/acmecloud-web \
-            web="$WEB_IMAGE"
+          cat >> "$RELEASE_DIR/kustomization.yaml" <<EOF
+
+          images:
+            - name: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$APP_REPOSITORY
+              newTag: $IMAGE_TAG
+            - name: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$WEB_REPOSITORY
+              newTag: $IMAGE_TAG
+          EOF
+
+          kubectl kustomize "$RELEASE_DIR" > "$RELEASE_DIR/acmecloud-release.yaml"
+
+          if grep -q 'RELEASE_TAG' "$RELEASE_DIR/acmecloud-release.yaml"; then
+            echo "ERROR: unresolved RELEASE_TAG remains in rendered manifest."
+            exit 1
+          fi
+
+          echo "=== Release images ==="
+          grep 'image:' "$RELEASE_DIR/acmecloud-release.yaml"
+
+          kubectl apply -f "$RELEASE_DIR/acmecloud-release.yaml"
 
       - name: Verify deployment rollout
         id: verify-rollout

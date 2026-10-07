@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
       - name: web
-        image: 944777361548.dkr.ecr.us-east-1.amazonaws.com/acmecloud-web:v5
+        image: 944777361548.dkr.ecr.us-east-1.amazonaws.com/acmecloud-web:RELEASE_TAG
         imagePullPolicy: IfNotPresent
         resources:
           requests:
