@@ -17,6 +17,6 @@ COPY --chown=nginx:nginx index.html /usr/share/nginx/html/index.html
 
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 
-USER nginx
+USER 101:101
 
 EXPOSE 8080
