@@ -175,6 +175,7 @@ acmecloud-enterprise-platform/
 │   │   ├── architecture.md
 │   │   └── README.md
 │   ├── portfolio/
+│   │   ├── challenges-and-solutions.md
 │   │   ├── interview-guide.md
 │   │   ├── portfolio-overview.md
 │   │   └── project-highlights.md
@@ -282,6 +283,8 @@ The platform follows a two-phase infrastructure and configuration workflow:
 ## Project Evidence
 
 Implementation and validation evidence is available in the dedicated [Project Evidence Gallery](docs/screenshots/README.md).
+
+The engineering problems encountered throughout the platform lifecycle, their root causes, implemented solutions, and lessons learned are documented in [Challenges and Solutions](docs/portfolio/challenges-and-solutions.md).
 
 The evidence includes Terraform validation, Ansible configuration, immutable Amazon ECR releases, Kubernetes security controls, GitHub Actions OIDC and deployment logic, Prometheus/Grafana configuration, and post-demonstration AWS cost-control validation.
 
