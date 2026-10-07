@@ -491,10 +491,7 @@ variable "db_password" {
   validation {
     condition = (
       !var.enable_data_tier ||
-      (
-        var.db_password != null &&
-        length(var.db_password) >= 12
-      )
+      try(length(var.db_password) >= 12, false)
     )
     error_message = "db_password must be supplied securely and contain at least 12 characters when enable_data_tier is true."
   }
