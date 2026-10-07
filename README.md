@@ -21,6 +21,20 @@ Infrastructure is organized into reusable Terraform modules, while server config
 
 ## Architecture
 
+### Production Architecture
+
+![AcmeCloud Production Architecture](docs/architecture/diagrams/acmecloud-production-architecture.png)
+
+> **AcmeCloud Enterprise Platform** integrates AWS infrastructure, Terraform, Ansible, Docker, Amazon ECR, Amazon EKS, Kubernetes, GitHub Actions CI/CD, Prometheus, Grafana, CloudWatch, security controls, automated rollback, and cost-aware infrastructure lifecycle management.
+
+Additional architecture views:
+
+- [Presentation Architecture](docs/architecture/diagrams/acmecloud-production-architecture-design.png)
+- [CI/CD Pipeline](docs/architecture/diagrams/acmecloud-cicd-pipeline.png)
+- [EKS Request Flow](docs/architecture/diagrams/acmecloud-eks-request-flow.png)
+- [Observability Architecture](docs/architecture/diagrams/acmecloud-observability-architecture.png)
+
+
 The platform uses a multi-tier AWS architecture with separate web, application, and database layers.
 
 ```text
@@ -150,9 +164,28 @@ acmecloud-enterprise-platform/
 │
 ├── docs/
 │   ├── architecture/
+│   │   ├── diagrams/
+│   │   │   ├── acmecloud-cicd-pipeline.png
+│   │   │   ├── acmecloud-eks-request-flow.png
+│   │   │   ├── acmecloud-observability-architecture.png
+│   │   │   ├── acmecloud-production-architecture-design.png
+│   │   │   └── acmecloud-production-architecture.png
 │   │   └── production-architecture.md
-│   └── cicd/
-│       ├── architecture.md
+│   ├── cicd/
+│   │   ├── architecture.md
+│   │   └── README.md
+│   ├── portfolio/
+│   │   ├── interview-guide.md
+│   │   ├── portfolio-overview.md
+│   │   └── project-highlights.md
+│   └── screenshots/
+│       ├── ansible/
+│       ├── cicd/
+│       ├── docker-ecr/
+│       ├── kubernetes-eks/
+│       ├── monitoring/
+│       ├── terraform/
+│       ├── validation/
 │       └── README.md
 │
 ├── kubernetes/
@@ -245,6 +278,12 @@ The platform follows a two-phase infrastructure and configuration workflow:
    - Application Load Balancer target health is checked.
    - Web and application endpoints are tested.
    - CloudWatch metrics are verified in the `AcmeCloud/EC2` namespace.
+
+## Project Evidence
+
+Implementation and validation evidence is available in the dedicated [Project Evidence Gallery](docs/screenshots/README.md).
+
+The evidence includes Terraform validation, Ansible configuration, immutable Amazon ECR releases, Kubernetes security controls, GitHub Actions OIDC and deployment logic, Prometheus/Grafana configuration, and post-demonstration AWS cost-control validation.
 
 ## Prerequisites
 
