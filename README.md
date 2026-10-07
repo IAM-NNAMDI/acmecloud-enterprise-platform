@@ -78,6 +78,8 @@ Terraform provisions the AWS infrastructure using reusable modules with clear se
 | `Alb` | Public web ALB, internal application ALB, target groups, listeners and Auto Scaling attachments |
 | `Database` | Amazon RDS for MySQL and Amazon ElastiCache for Redis |
 | `storage-identity` | Amazon S3, bucket security and lifecycle configuration, Amazon Cognito, AWS Lambda and Lambda IAM permissions |
+| `eks` | Amazon EKS cluster, managed node group, Kubernetes networking dependencies, OIDC integration and AWS Load Balancer Controller IAM resources |
+| `github-oidc` | GitHub OIDC provider, GitHub Actions IAM role, ECR publishing permissions and EKS deployment permissions |
 
 ## Configuration Management — Ansible
 
@@ -119,6 +121,10 @@ Metrics include EC2 instance and Auto Scaling Group dimensions, allowing individ
 
 ```text
 acmecloud-enterprise-platform/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+│
 ├── ansible/
 │   ├── inventories/
 │   │   ├── aws/
@@ -134,11 +140,55 @@ acmecloud-enterprise-platform/
 │   ├── requirements.yml
 │   └── ansible.cfg
 │
+├── docker/
+│   ├── app/
+│   │   └── Dockerfile
+│   ├── web/
+│   │   ├── Dockerfile
+│   │   └── index.html
+│   └── compose.yml
+│
+├── docs/
+│   ├── architecture/
+│   │   └── production-architecture.md
+│   └── cicd/
+│       ├── architecture.md
+│       └── README.md
+│
+├── kubernetes/
+│   └── eks/
+│       ├── app/
+│       │   ├── deployment.yaml
+│       │   └── service.yaml
+│       ├── web/
+│       │   ├── deployment.yaml
+│       │   └── service.yaml
+│       ├── ingress.yaml
+│       ├── kustomization.yaml
+│       └── namespace.yaml
+│
+├── monitoring/
+│   ├── alerts/
+│   │   └── acmecloud-alerts.yaml
+│   ├── architecture/
+│   │   └── README.md
+│   ├── dashboards/
+│   │   └── acmecloud-overview.json
+│   ├── MONITORING.md
+│   ├── README.md
+│   └── values.yaml
+│
+├── scripts/
+│   ├── aws-lab-restore.sh
+│   └── aws-lab-shutdown.sh
+│
 ├── terraform/
 │   ├── modules/
 │   │   ├── Alb/
 │   │   ├── compute/
 │   │   ├── Database/
+│   │   ├── eks/
+│   │   ├── github-oidc/
 │   │   ├── security/
 │   │   ├── storage-identity/
 │   │   └── vpc/
@@ -382,11 +432,14 @@ The ECR repositories are configured with immutable image tags and image scanning
 
 Docker BuildKit provenance metadata was disabled when building the images to ensure compatibility with the ECR image manifest format used during this phase.
 
-Current validated container releases:
+Production releases are published to Amazon ECR using immutable tags derived from the first 12 characters of the Git commit SHA.
 
-- `acmecloud-app:v3`
-- `acmecloud-web:v5`
+The final integrated release validated during production testing was:
 
+- `acmecloud-app:536b0e8455a0`
+- `acmecloud-web:536b0e8455a0`
+
+Using the same immutable release identifier for both services provides traceability between the Git commit, CI/CD pipeline, ECR images, and Kubernetes deployment.
 
 ## Phase 5 — Kubernetes and Amazon EKS
 
@@ -436,10 +489,15 @@ Tomcat Pod    Tomcat Pod
 
 The EKS worker nodes pull the AcmeCloud container images directly from private Amazon ECR repositories using their IAM permissions.
 
-Validated container images:
 
-- `acmecloud-web:v5`
-- `acmecloud-app:v3`
+Production releases are published to Amazon ECR using immutable tags derived from the first 12 characters of the Git commit SHA.
+
+The final validated EKS release used:
+
+- `acmecloud-web:536b0e8455a0`
+- `acmecloud-app:536b0e8455a0`
+
+The release tag is injected into the Kubernetes manifests through Kustomize rather than storing a mutable or historical production image version directly in the deployment manifests.
 
 No manually managed ECR image pull secret is required in the EKS environment.
 
@@ -515,3 +573,235 @@ Detailed CI/CD documentation:
 
     docs/cicd/README.md
     docs/cicd/architecture.md
+
+## Phase 8 — Production Integration
+
+Phase 8 integrates the individual AcmeCloud components into a complete production-style DevOps platform.
+
+The final integration connects Terraform, Ansible, Docker, Amazon ECR, Amazon EKS, Kubernetes ingress, Prometheus and Grafana observability, GitHub Actions CI/CD, AWS IAM/OIDC security, deployment resilience, and AWS cost-control automation.
+
+The definitive production architecture is documented in:
+
+`docs/architecture/production-architecture.md`
+
+### Production Release Model
+
+AcmeCloud uses immutable production releases derived from the first 12 characters of the Git commit SHA.
+
+The final validated release was:
+
+```text
+536b0e8455a0
+```
+
+Both application components use the same release identifier:
+
+```text
+acmecloud-app:536b0e8455a0
+acmecloud-web:536b0e8455a0
+```
+
+GitHub Actions builds and publishes both images to Amazon ECR.
+
+Kustomize injects the selected immutable release into the Kubernetes manifests before deployment. The base deployment manifests contain the `RELEASE_TAG` placeholder rather than a historical deployable image version, preventing stale releases from being silently redeployed.
+
+The release path is:
+
+```text
+Git Commit
+    |
+    v
+GitHub Actions
+    |
+    v
+Build + Security Scan
+    |
+    v
+Amazon ECR
+    |
+    | Immutable SHA images
+    v
+Kustomize Release Rendering
+    |
+    v
+Amazon EKS
+    |
+    v
+Rollout Verification
+```
+
+### Kubernetes Security
+
+The production workloads apply container and pod-level security controls.
+
+The web container runs as numeric UID/GID `101:101`, while the application container runs as numeric UID/GID `1000:1000`.
+
+Kubernetes workload security includes:
+
+- Non-root container execution
+- Numeric container users
+- `allowPrivilegeEscalation: false`
+- All Linux capabilities dropped
+- `RuntimeDefault` seccomp profile
+- Private Amazon ECR repositories
+- Immutable production image tags
+
+Using numeric users also allows Kubernetes to verify that containers satisfy the `runAsNonRoot` requirement.
+
+### Prometheus and Grafana Observability
+
+The EKS environment uses `kube-prometheus-stack` to provide Kubernetes and application observability.
+
+The monitoring stack contains:
+
+- Prometheus
+- Grafana
+- Alertmanager
+- kube-state-metrics
+- node-exporter
+
+Prometheus collects worker-node, Kubernetes object, container, and workload metrics.
+
+Grafana provides the AcmeCloud platform dashboard using Prometheus as its default metrics data source.
+
+Alertmanager processes alerts generated by Prometheus rules.
+
+Custom AcmeCloud alerts monitor:
+
+- Node availability
+- High node CPU utilization
+- High node memory utilization
+- Container restarts
+- Deployment replica availability
+- Pods remaining not ready
+
+Monitoring services remain private using Kubernetes ClusterIP services. Administrative access can be provided through local Kubernetes port forwarding without creating another public AWS load balancer.
+
+Detailed monitoring documentation is available in:
+
+`monitoring/README.md`
+
+`monitoring/MONITORING.md`
+
+`monitoring/architecture/README.md`
+
+### Deployment Resilience and Rollback
+
+The Kubernetes deployments use rolling updates designed to maintain healthy replicas while replacement pods become ready.
+
+Failure behavior was tested using deliberately invalid ECR image references.
+
+During the resilience test:
+
+- Existing healthy replicas remained available
+- Replacement pods entered `ErrImagePull`
+- The failed rollout was detected
+- The previous known-good application and web images were restored
+- Both deployments returned to a healthy state
+
+Before deployment, the CI/CD workflow records the currently running application and web image references.
+
+If rollout verification fails, the rollback path restores those exact previous images rather than relying on a mutable tag.
+
+### GitHub OIDC and Deployment Authorization
+
+GitHub Actions authenticates to AWS using OpenID Connect rather than stored long-lived AWS access keys.
+
+The workflow assumes the dedicated IAM role:
+
+```text
+acmecloud-production-github-actions
+```
+
+The role can publish AcmeCloud images to Amazon ECR and access the target EKS environment.
+
+Kubernetes deployment authorization is scoped to the `acmecloud` namespace.
+
+Infrastructure administration remains separate from application deployment permissions, creating a least-privilege boundary between CI/CD and platform administration.
+
+### Cost-Control Automation
+
+AcmeCloud includes explicit lifecycle automation for AWS resources that generate significant ongoing lab cost.
+
+The repository provides:
+
+```text
+scripts/aws-lab-restore.sh
+scripts/aws-lab-shutdown.sh
+```
+
+The restore workflow requires an explicit immutable `RELEASE_TAG`.
+
+Before restoring chargeable infrastructure, the restore script verifies that the selected release exists in both AcmeCloud ECR repositories.
+
+The shutdown workflow removes or disables chargeable lab resources including:
+
+- Amazon EKS
+- EKS managed worker nodes
+- Kubernetes-created Application Load Balancer
+- NAT Gateway
+- NAT Elastic IP
+- Optional RDS and Redis data tier
+
+This allows the reusable baseline infrastructure to remain while expensive runtime components are disabled between demonstrations.
+
+### End-to-End Production Validation
+
+The final integrated production release `536b0e8455a0` was validated end to end.
+
+Validation confirmed:
+
+- Both immutable release images existed in Amazon ECR
+- Application deployment reached 2/2 available replicas
+- Web deployment reached 2/2 available replicas
+- Workloads were distributed across both EKS worker nodes
+- Application workloads completed the final rollout with zero restarts
+- AWS Load Balancer Controller successfully reconciled the ingress
+- Internet-facing Application Load Balancer was provisioned
+- Both current ALB targets reported healthy
+- `/` returned HTTP 200
+- `/app/` returned HTTP 200
+- Prometheus was operational
+- Grafana was operational
+- Alertmanager was operational
+- Custom AcmeCloud Prometheus rules were loaded
+- Monitoring components were healthy
+
+After production validation, the EKS cluster, Application Load Balancer, NAT Gateway, and NAT Elastic IP were successfully removed as part of the cost-control shutdown.
+
+### Operational Lifecycle
+
+The production demonstration lifecycle is:
+
+```text
+Select Immutable Release
+        |
+        v
+Restore AWS Runtime Infrastructure
+        |
+        v
+Restore Amazon EKS
+        |
+        v
+Render Kubernetes Release
+        |
+        v
+Deploy Application
+        |
+        v
+Provision ALB Ingress
+        |
+        v
+Restore Observability
+        |
+        v
+Validate Production
+        |
+        v
+Demonstrate / Test Platform
+        |
+        v
+Shutdown Chargeable Resources
+```
+
+This design allows the complete AcmeCloud platform to be restored for demonstrations and validation while avoiding unnecessary ongoing AWS lab costs.
